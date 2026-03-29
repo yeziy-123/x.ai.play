@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X AI - 智能对话</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .message-bubble {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .typing-dot {
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+        
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Custom scrollbar for chat */
+        .chat-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .chat-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .chat-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        
+        .chat-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Mobile glass effect only */
+        .mobile-glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Desktop solid background */
+        @media (min-width: 769px) {
+            .desktop-solid {
+                background: #111827;
+                backdrop-filter: none;
+                border-bottom: 1px solid #374151;
+            }
+        }
+        
+        /* Sidebar Animation */
+        .sidebar {
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .sidebar.open {
+            transform: translateX(0);
+        }
+        
+        .sidebar-overlay {
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+        
+        .sidebar-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .topic-item {
+            transition: all 0.2s;
+        }
+        
+        .topic-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .topic-item.active {
+            background: rgba(139, 92, 246, 0.2);
+            border-left: 3px solid #8b5cf6;
+        }
+        
+        .settings-panel {
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .settings-panel.open {
+            transform: translateX(0);
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-header-btn {
+                display: flex !important;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            .mobile-header-btn {
+                display: none !important;
+            }
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+        }
+        
+        /* Reasoning section */
+        .reasoning-box {
+            background: rgba(139, 92, 246, 0.1);
+            border-left: 3px solid #8b5cf6;
+            margin-bottom: 12px;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .reasoning-toggle {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .reasoning-toggle:hover {
+            background: rgba(139, 92, 246, 0.2);
+        }
+        
+        /* Code block styles */
+        .code-container {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+        
+        .code-header {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .code-tabs {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .code-tab {
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #8b949e;
+        }
+        
+        .code-tab:hover {
+            background: #21262d;
+            color: #c9d1d9;
+        }
+        
+        .code-tab.active {
+            background: #238636;
+            color: white;
+        }
+        
+        .code-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .code-btn {
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #21262d;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .code-btn:hover {
+            background: #30363d;
+            border-color: #8b949e;
+        }
+        
+        .code-content {
+            position: relative;
+            min-height: 100px;
+        }
+        
+        .code-view {
+            display: none;
+            max-height: 400px;
+            overflow: auto;
+        }
+        
+        .code-view.active {
+            display: block;
+        }
+        
+        .code-preview {
+            display: none;
+            width: 100%;
+            min-height: 300px;
+            background: white;
+        }
+        
+        .code-preview.active {
+            display: block;
+        }
+        
+        .preview-iframe {
+            width: 100%;
+            min-height: 300px;
+            border: none;
+            background: white;
+        }
+        
+        /* Message actions */
+        .message-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .message-bubble:hover .message-actions {
+            opacity: 1;
+        }
+        
+        .action-btn {
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.1);
+            color: #9ca3af;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Auth overlay */
+        .auth-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .auth-box {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        
+        .auth-input {
+            width: 100%;
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: white;
+            font-size: 14px;
+            margin-top: 16px;
+            outline: none;
+            transition: all 0.2s;
+        }
+        
+        .auth-input:focus {
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        }
+        
+        .auth-btn {
+            width: 100%;
+            margin-top: 16px;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .auth-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px -10px rgba(102, 126, 234, 0.5);
+        }
+        
+        .auth-error {
+            color: #ef4444;
+            font-size: 14px;
+            margin-top: 12px;
+            display: none;
+        }
+        
+        /* Toggle switch */
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 24px;
+            background: #374151;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .toggle-switch.active {
+            background: #8b5cf6;
+        }
+        
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        
+        .toggle-switch.active::after {
+            transform: translateX(24px);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white h-screen flex flex-col overflow-hidden">
+    <!-- Auth Overlay -->
+    <div id="auth-overlay" class="auth-overlay">
+        <div class="auth-box">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center mb-4">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold">验证访问</h2>
+                <p class="text-gray-400 mt-2 text-sm">请输入访问密钥以继续使用 X AI</p>
+            </div>
+            <input type="password" id="auth-key" class="auth-input" placeholder="输入密钥..." onkeydown="if(event.key==='Enter')checkAuth()">
+            <div id="auth-error" class="auth-error text-center">密钥错误，请重试</div>
+            <button onclick="checkAuth()" class="auth-btn">验证并进入</button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="mobile-glass desktop-solid sticky top-0 z-40 px-4 md:px-6 py-4 flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold gradient-text">X AI</h1>
+                <p class="text-xs text-gray-400 hidden sm:block">https://yeziy-123.github.io/4/</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-2">
+            <button onclick="startNewTopic()" class="hidden md:flex items-center space-x-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-sm font-medium border border-gray-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span>新话题</span>
+            </button>
+            
+            <button onclick="toggleSidebar()" class="mobile-header-btn p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white md:hidden">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="flex-1 flex overflow-hidden relative">
+        <!-- Desktop Sidebar -->
+        <aside class="hidden md:flex w-80 bg-gray-900 border-r border-gray-800 flex-col flex-shrink-0">
+            <div class="p-4 border-b border-gray-800">
+                <button onclick="startNewTopic()" class="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-xl transition-all shadow-lg shadow-purple-600/20 font-medium">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    <span>开启新话题</span>
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-2" id="desktop-topics-list"></div>
+            
+            <div class="p-4 border-t border-gray-800">
+                <button onclick="openSettings()" class="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-800 rounded-xl transition-colors text-gray-300 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <span>设置</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Chat Container -->
+        <main class="flex-1 flex flex-col min-w-0 bg-gray-900 h-full">
+            <!-- Messages Area - Fixed scrolling -->
+            <div id="chat-messages" class="flex-1 overflow-y-auto chat-scrollbar p-4 md:p-6 space-y-6" style="overscroll-behavior: contain;">
+                <!-- Welcome Message -->
+                <div class="message-bubble flex items-start space-x-4">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex-shrink-0 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="bg-gray-800 rounded-2xl rounded-tl-none px-5 py-4 shadow-xl border border-gray-700">
+                            <p class="text-gray-200 leading-relaxed">
+                                你好！我是 <span class="gradient-text font-semibold">X AI</span>，基于 NVIDIA Nemotron-3 Super 120B 大模型。我可以帮你解答问题、编写代码、分析数据或进行创意写作。有什么我可以帮你的吗？
+                            </p>
+                        </div>
+                        <span class="text-xs text-gray-500 mt-2 block ml-1">刚刚</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="p-4 md:p-6 border-t border-gray-800 bg-gray-900 flex-shrink-0">
+                <div class="max-w-4xl mx-auto relative">
+                    <div class="relative flex items-end bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-500/20 transition-all">
+                        <textarea 
+                            id="user-input" 
+                            rows="1"
+                            class="w-full bg-transparent text-white placeholder-gray-500 px-5 py-4 pr-14 resize-none outline-none max-h-32 scrollbar-hide"
+                            placeholder="输入消息..."
+                            oninput="autoResize(this)"
+                            onkeydown="handleKeyDown(event)"
+                        ></textarea>
+                        <button 
+                            onclick="sendMessage()" 
+                            id="send-btn"
+                            class="absolute right-3 bottom-3 p-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-xl transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-600/30"
+                        >
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-3 text-center">
+                        按 Enter 发送，Shift + Enter 换行
+                    </p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Mobile Sidebar -->
+    <div id="sidebar-overlay" class="sidebar-overlay fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden" onclick="toggleSidebar()"></div>
+    <aside id="mobile-sidebar" class="sidebar fixed right-0 top-0 h-full w-80 bg-gray-900 border-l border-gray-800 z-50 flex flex-col shadow-2xl md:hidden">
+        <div class="p-4 border-b border-gray-800 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                    </svg>
+                </div>
+                <span class="font-semibold text-lg">话题管理</span>
+            </div>
+            <button onclick="toggleSidebar()" class="p-2 hover:bg-gray-800 rounded-lg transition-colors">
+                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-4">
+            <button onclick="startNewTopic(); toggleSidebar();" class="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-xl transition-all shadow-lg shadow-purple-600/20 font-medium">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span>开启新话题</span>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-2" id="mobile-topics-list"></div>
+
+        <div class="p-4 border-t border-gray-800 space-y-2">
+            <button onclick="openSettings(); toggleSidebar();" class="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-800 rounded-xl transition-colors text-gray-300 hover:text-white">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <span>设置</span>
+            </button>
+            <button onclick="logout()" class="w-full flex items-center space-x-3 px-4 py-3 hover:bg-red-900/20 rounded-xl transition-colors text-red-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+                <span>退出登录</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeSettings()"></div>
+        <div class="absolute right-0 top-0 h-full w-full max-w-md bg-gray-900 border-l border-gray-800 shadow-2xl settings-panel overflow-y-auto">
+            <div class="sticky top-0 bg-gray-900/95 backdrop-blur-xl border-b border-gray-800 p-6 flex items-center justify-between z-10">
+                <h2 class="text-2xl font-bold">设置</h2>
+                <button onclick="closeSettings()" class="p-2 hover:bg-gray-800 rounded-lg transition-colors">
+                    <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-8">
+                <div class="space-y-4">
+                    <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">模型信息</h3>
+                    <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="font-semibold">Nemotron-3 Super 120B</p>
+                                <p class="text-sm text-gray-400">via OpenRouter</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">输出设置</h3>
+                    <div class="bg-gray-800 rounded-xl p-4 border border-gray-700 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-medium">流式输出</p>
+                                <p class="text-sm text-gray-400">逐字显示 AI 回复内容</p>
+                            </div>
+                            <div class="toggle-switch ${CONFIG.stream ? 'active' : ''}" onclick="toggleStream()" id="stream-toggle"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">API 配置</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">API Key</label>
+                            <input type="password" id="settings-api-key" value="${CONFIG.apiKey}" 
+                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-purple-500 transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">模型名称</label>
+                            <input type="text" id="settings-model" value="${CONFIG.model}" 
+                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-purple-500 transition-colors">
+                        </div>
+                        <button onclick="saveSettings()" class="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors">
+                            保存配置
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">数据管理</h3>
+                    <div class="space-y-2">
+                        <button onclick="exportChats()" class="w-full flex items-center space-x-3 px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl transition-colors border border-gray-700 text-left">
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                            </svg>
+                            <span>导出所有聊天记录</span>
+                        </button>
+                        <button onclick="clearAllData()" class="w-full flex items-center space-x-3 px-4 py-3 bg-red-900/20 hover:bg-red-900/30 border border-red-900/50 rounded-xl transition-colors text-red-400 text-left">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            <span>清除所有数据</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auth
+        const CORRECT_KEY = 'X-AI-140527-KEY';
+        const AUTH_KEY = 'xai_auth';
+        
+        window.onload = function() {
+            const isAuth = localStorage.getItem(AUTH_KEY);
+            if (isAuth === 'true') {
+                document.getElementById('auth-overlay').style.display = 'none';
+                initApp();
+            }
+        };
+        
+        function checkAuth() {
+            const input = document.getElementById('auth-key').value;
+            if (input === CORRECT_KEY) {
+                localStorage.setItem(AUTH_KEY, 'true');
+                document.getElementById('auth-overlay').style.display = 'none';
+                document.getElementById('auth-error').style.display = 'none';
+                initApp();
+            } else {
+                document.getElementById('auth-error').style.display = 'block';
+                document.getElementById('auth-key').value = '';
+                document.getElementById('auth-key').focus();
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem(AUTH_KEY);
+            location.reload();
+        }
+
+        // App Config
+        let CONFIG = {
+            apiKey: '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',
+            model: 'nvidia/nemotron-3-super-120b-a12b:free',
+            apiUrl: 'https://openrouter.ai/api/v1/chat/completions',
+            stream: false
+        };
+
+        let topics = [];
+        let currentTopicId = null;
+        let isGenerating = false;
+        let abortController = null;
+
+        function initApp() {
+            const savedConfig = localStorage.getItem('xai_config');
+            if (savedConfig) {
+                CONFIG = { ...CONFIG, ...JSON.parse(savedConfig) };
+            }
+            loadTopics();
+            if (topics.length === 0) {
+                startNewTopic();
+            } else {
+                loadTopic(topics[0].id);
+            }
+            document.getElementById('user-input').focus();
+        }
+
+        function toggleStream() {
+            CONFIG.stream = !CONFIG.stream;
+            document.getElementById('stream-toggle').classList.toggle('active');
+            localStorage.setItem('xai_config', JSON.stringify(CONFIG));
+        }
+
+        // Topic Management
+        function startNewTopic() {
+            const topic = {
+                id: generateId(),
+                title: '新话题 ' + new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'You are X AI, a helpful AI assistant. When solving problems, first show your reasoning process inside <reasoning> tags, then provide the final answer. For code, always provide complete runnable examples.'
+                    }
+                ],
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            };
+            
+            topics.unshift(topic);
+            currentTopicId = topic.id;
+            saveTopics();
+            renderTopics();
+            renderMessages();
+            
+            setTimeout(() => {
+                document.getElementById('user-input').focus();
+            }, 100);
+        }
+
+        function loadTopic(topicId) {
+            currentTopicId = topicId;
+            renderTopics();
+            renderMessages();
+        }
+
+        function deleteTopic(topicId, event) {
+            event.stopPropagation();
+            if (!confirm('确定要删除这个话题吗？')) return;
+            
+            topics = topics.filter(t => t.id !== topicId);
+            if (topics.length === 0) {
+                startNewTopic();
+            } else if (currentTopicId === topicId) {
+                currentTopicId = topics[0].id;
+                renderMessages();
+            }
+            saveTopics();
+            renderTopics();
+        }
+
+        function updateTopicTitle(topicId, firstMessage) {
+            const topic = topics.find(t => t.id === topicId);
+            if (topic && topic.messages.length <= 2) {
+                const title = firstMessage.slice(0, 20) + (firstMessage.length > 20 ? '...' : '');
+                topic.title = title || '新话题';
+                topic.updatedAt = Date.now();
+                saveTopics();
+                renderTopics();
+            }
+        }
+
+        function saveTopics() {
+            localStorage.setItem('xai_topics', JSON.stringify(topics));
+            localStorage.setItem('xai_current_topic', currentTopicId);
+        }
+
+        function loadTopics() {
+            const saved = localStorage.getItem('xai_topics');
+            const savedCurrent = localStorage.getItem('xai_current_topic');
+            if (saved) {
+                topics = JSON.parse(saved);
+            }
+            if (savedCurrent) {
+                currentTopicId = savedCurrent;
+            }
+        }
+
+        // UI Functions
+        function toggleSidebar() {
+            const sidebar = document.getElementById('mobile-sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+            renderTopics();
+        }
+
+        function openSettings() {
+            document.getElementById('settings-api-key').value = CONFIG.apiKey;
+            document.getElementById('settings-model').value = CONFIG.model;
+            document.getElementById('stream-toggle').classList.toggle('active', CONFIG.stream);
+            document.getElementById('settings-modal').classList.remove('hidden');
+            setTimeout(() => {
+                document.querySelector('.settings-panel').classList.add('open');
+            }, 10);
+        }
+
+        function closeSettings() {
+            document.querySelector('.settings-panel').classList.remove('open');
+            setTimeout(() => {
+                document.getElementById('settings-modal').classList.add('hidden');
+            }, 300);
+        }
+
+        function saveSettings() {
+            CONFIG.apiKey = document.getElementById('settings-api-key').value;
+            CONFIG.model = document.getElementById('settings-model').value;
+            localStorage.setItem('xai_config', JSON.stringify(CONFIG));
+            alert('设置已保存');
+            closeSettings();
+        }
+
+        function exportChats() {
+            const dataStr = JSON.stringify(topics, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `xai_chats_${new Date().toISOString().slice(0, 10)}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function clearAllData() {
+            if (!confirm('确定要清除所有数据吗？此操作不可恢复。')) return;
+            localStorage.removeItem('xai_topics');
+            localStorage.removeItem('xai_current_topic');
+            localStorage.removeItem('xai_config');
+            topics = [];
+            startNewTopic();
+            closeSettings();
+        }
+
+        // Rendering
+        function renderTopics() {
+            const desktopList = document.getElementById('desktop-topics-list');
+            const mobileList = document.getElementById('mobile-topics-list');
+            
+            const html = topics.map(topic => `
+                <div onclick="loadTopic('${topic.id}')" 
+                     class="topic-item group flex items-center justify-between p-3 rounded-xl cursor-pointer mb-1 ${topic.id === currentTopicId ? 'active' : ''}">
+                    <div class="flex items-center space-x-3 flex-1 min-w-0">
+                        <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                        </svg>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium truncate ${topic.id === currentTopicId ? 'text-purple-400' : 'text-gray-300'}">${escapeHtml(topic.title)}</p>
+                            <p class="text-xs text-gray-500">${new Date(topic.updatedAt).toLocaleDateString('zh-CN')}</p>
+                        </div>
+                    </div>
+                    <button onclick="deleteTopic('${topic.id}', event)" 
+                            class="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-900/30 rounded-lg transition-all text-gray-400 hover:text-red-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+            
+            if (desktopList) desktopList.innerHTML = html;
+            if (mobileList) mobileList.innerHTML = html;
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('chat-messages');
+            const topic = topics.find(t => t.id === currentTopicId);
+            
+            if (!topic) return;
+            
+            container.innerHTML = '';
+            
+            topic.messages.forEach((msg, index) => {
+                if (msg.role === 'system') return;
+                const msgEl = createMessageElement(msg.role, msg.content, msg.reasoning, `msg-${index}`, index);
+                container.appendChild(msgEl);
+            });
+            
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('chat-messages');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function createMessageElement(role, content, reasoning, id, index) {
+            const isUser = role === 'user';
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = `message-bubble flex items-start space-x-4 ${isUser ? 'flex-row-reverse space-x-reverse' : ''}`;
+            
+            const avatar = isUser 
+                ? `<div class="w-10 h-10 rounded-full bg-gray-700 flex-shrink-0 flex items-center justify-center">
+                     <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                     </svg>
+                   </div>`
+                : `<div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex-shrink-0 flex items-center justify-center">
+                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                     </svg>
+                   </div>`;
+            
+            const bubbleClass = isUser 
+                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-2xl rounded-tr-none' 
+                : 'bg-gray-800 text-gray-200 rounded-2xl rounded-tl-none border border-gray-700';
+            
+            let reasoningHtml = '';
+            if (!isUser && reasoning) {
+                const reasoningId = `reasoning-${index}`;
+                reasoningHtml = `
+                    <div class="reasoning-box mb-3 overflow-hidden">
+                        <div class="reasoning-toggle flex items-center justify-between p-3 cursor-pointer" onclick="toggleReasoning('${reasoningId}')">
+                            <div class="flex items-center space-x-2 text-purple-400 text-sm font-medium">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                </svg>
+                                <span>思考过程</span>
+                            </div>
+                            <svg id="arrow-${reasoningId}" class="w-4 h-4 text-purple-400 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                        <div id="${reasoningId}" class="hidden px-4 pb-3 text-sm text-gray-400 border-t border-purple-500/20 pt-2">
+                            ${escapeHtml(reasoning).replace(/\n/g, '<br>')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            let actionsHtml = '';
+            if (!isUser) {
+                actionsHtml = `
+                    <div class="message-actions">
+                        <button onclick="regenerateMessage(${index})" class="action-btn">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            <span>重新输出</span>
+                        </button>
+                        <button onclick="copyMessage(${index})" class="action-btn">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
+                            <span>复制</span>
+                        </button>
+                    </div>
+                `;
+            }
+            
+            div.innerHTML = `
+                ${avatar}
+                <div class="flex-1 min-w-0 ${isUser ? 'text-right' : ''}">
+                    <div class="${bubbleClass} px-5 py-4 shadow-xl inline-block max-w-full text-left w-full">
+                        ${reasoningHtml}
+                        <div class="prose prose-invert max-w-none ${isUser ? '[&_pre]:bg-purple-900/30 [&_code]:bg-purple-900/30' : ''}">
+                            ${isUser ? escapeHtml(content) : renderMarkdown(content, index)}
+                        </div>
+                    </div>
+                    ${actionsHtml}
+                    <span class="text-xs text-gray-500 mt-2 block ${isUser ? 'mr-1' : 'ml-1'}">${getTimestamp()}</span>
+                </div>
+            `;
+            
+            return div;
+        }
+
+        function toggleReasoning(id) {
+            const el = document.getElementById(id);
+            const arrow = document.getElementById('arrow-' + id);
+            if (el.classList.contains('hidden')) {
+                el.classList.remove('hidden');
+                arrow.classList.add('rotate-180');
+            } else {
+                el.classList.add('hidden');
+                arrow.classList.remove('rotate-180');
+            }
+        }
+
+        // Chat Functions
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const content = input.value.trim();
+            
+            if (!content || isGenerating) return;
+            
+            const topic = topics.find(t => t.id === currentTopicId);
+            if (!topic) return;
+            
+            // Cancel any ongoing request
+            if (abortController) {
+                abortController.abort();
+            }
+            
+            topic.messages.push({ role: 'user', content });
+            topic.updatedAt = Date.now();
+            
+            if (topic.messages.length === 2) {
+                updateTopicTitle(currentTopicId, content);
+            }
+            
+            saveTopics();
+            renderTopics();
+            renderMessages();
+            
+            input.value = '';
+            input.style.height = 'auto';
+            isGenerating = true;
+            document.getElementById('send-btn').disabled = true;
+            
+            const container = document.getElementById('chat-messages');
+            
+            if (CONFIG.stream) {
+                await sendStreamMessage(topic, container);
+            } else {
+                await sendNormalMessage(topic, container);
+            }
+        }
+
+        async function sendNormalMessage(topic, container) {
+            const typingId = 'typing-' + Date.now();
+            const typingEl = document.createElement('div');
+            typingEl.id = typingId;
+            typingEl.className = 'message-bubble flex items-start space-x-4';
+            typingEl.innerHTML = `
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex-shrink-0 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <div class="bg-gray-800 rounded-2xl rounded-tl-none px-5 py-4 shadow-xl border border-gray-700 inline-flex items-center space-x-2">
+                        <div class="typing-dot w-2 h-2 bg-purple-500 rounded-full"></div>
+                        <div class="typing-dot w-2 h-2 bg-purple-500 rounded-full"></div>
+                        <div class="typing-dot w-2 h-2 bg-purple-500 rounded-full"></div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(typingEl);
+            scrollToBottom();
+            
+            try {
+                const response = await fetch(CONFIG.apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${CONFIG.apiKey}`,
+                        'HTTP-Referer': window.location.href,
+                        'X-Title': 'X AI Chat'
+                    },
+                    body: JSON.stringify({
+                        model: CONFIG.model,
+                        messages: topic.messages,
+                        temperature: 0.7,
+                        max_tokens: 4096,
+                        stream: false
+                    })
+                });
+                
+                document.getElementById(typingId)?.remove();
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                let fullContent = data.choices[0].message.content;
+                
+                let reasoning = '';
+                let finalContent = fullContent;
+                
+                const reasoningMatch = fullContent.match(/<reasoning>([\s\S]*?)<\/reasoning>/);
+                if (reasoningMatch) {
+                    reasoning = reasoningMatch[1].trim();
+                    finalContent = fullContent.replace(/<reasoning>[\s\S]*?<\/reasoning>/, '').trim();
+                }
+                
+                topic.messages.push({ 
+                    role: 'assistant', 
+                    content: finalContent,
+                    reasoning: reasoning,
+                    fullResponse: fullContent
+                });
+                topic.updatedAt = Date.now();
+                saveTopics();
+                renderTopics();
+                renderMessages();
+                
+            } catch (error) {
+                document.getElementById(typingId)?.remove();
+                topic.messages.push({ 
+                    role: 'assistant', 
+                    content: `抱歉，发生了错误：${error.message}`,
+                    reasoning: ''
+                });
+                saveTopics();
+                renderMessages();
+            } finally {
+                isGenerating = false;
+                document.getElementById('send-btn').disabled = false;
+            }
+        }
+
+        async function sendStreamMessage(topic, container) {
+            abortController = new AbortController();
+            
+            // Create message element for streaming
+            const msgIndex = topic.messages.length;
+            const msgId = `msg-${msgIndex}`;
+            const div = document.createElement('div');
+            div.id = msgId;
+            div.className = 'message-bubble flex items-start space-x-4';
+            div.innerHTML = `
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex-shrink-0 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="bg-gray-800 rounded-2xl rounded-tl-none px-5 py-4 shadow-xl border border-gray-700 inline-block max-w-full text-left w-full">
+                        <div class="prose prose-invert max-w-none" id="stream-content-${msgIndex}">
+                            <span class="animate-pulse">▊</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+            scrollToBottom();
+            
+            let fullContent = '';
+            let reasoning = '';
+            let finalContent = '';
+            let isInReasoning = false;
+            
+            try {
+                const response = await fetch(CONFIG.apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${CONFIG.apiKey}`,
+                        'HTTP-Referer': window.location.href,
+                        'X-Title': 'X AI Chat'
+                    },
+                    body: JSON.stringify({
+                        model: CONFIG.model,
+                        messages: topic.messages,
+                        temperature: 0.7,
+                        max_tokens: 4096,
+                        stream: true
+                    }),
+                    signal: abortController.signal
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
+                            
+                            try {
+                                const parsed = JSON.parse(data);
+                                const content = parsed.choices[0]?.delta?.content || '';
+                                fullContent += content;
+                                
+                                // Parse reasoning on the fly
+                                if (fullContent.includes('<reasoning>')) {
+                                    isInReasoning = true;
+                                }
+                                if (fullContent.includes('</reasoning>')) {
+                                    isInReasoning = false;
+                                    const match = fullContent.match(/<reasoning>([\s\S]*?)<\/reasoning>/);
+                                    if (match) {
+                                        reasoning = match[1];
+                                        finalContent = fullContent.replace(/<reasoning>[\s\S]*?<\/reasoning>/, '').trim();
+                                    }
+                                }
+                                
+                                if (!isInReasoning && finalContent) {
+                                    document.getElementById(`stream-content-${msgIndex}`).innerHTML = renderMarkdown(finalContent, msgIndex) + '<span class="animate-pulse">▊</span>';
+                                    scrollToBottom();
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+                
+                // Final parse
+                const match = fullContent.match(/<reasoning>([\s\S]*?)<\/reasoning>/);
+                if (match) {
+                    reasoning = match[1];
+                    finalContent = fullContent.replace(/<reasoning>[\s\S]*?<\/reasoning>/, '').trim();
+                } else {
+                    finalContent = fullContent;
+                }
+                
+                topic.messages.push({ 
+                    role: 'assistant', 
+                    content: finalContent,
+                    reasoning: reasoning,
+                    fullResponse: fullContent
+                });
+                topic.updatedAt = Date.now();
+                saveTopics();
+                renderTopics();
+                renderMessages();
+                
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    // User cancelled, keep partial message
+                    return;
+                }
+                document.getElementById(`stream-content-${msgIndex}`).innerHTML = `抱歉，发生了错误：${error.message}`;
+                topic.messages.push({ 
+                    role: 'assistant', 
+                    content: `抱歉，发生了错误：${error.message}`,
+                    reasoning: ''
+                });
+                saveTopics();
+            } finally {
+                isGenerating = false;
+                document.getElementById('send-btn').disabled = false;
+                abortController = null;
+            }
+        }
+
+        async function regenerateMessage(index) {
+            const topic = topics.find(t => t.id === currentTopicId);
+            if (!topic) return;
+            
+            let userMessageIndex = -1;
+            for (let i = index - 1; i >= 0; i--) {
+                if (topic.messages[i].role === 'user') {
+                    userMessageIndex = i;
+                    break;
+                }
+            }
+            
+            if (userMessageIndex === -1) return;
+            
+            topic.messages = topic.messages.slice(0, index);
+            saveTopics();
+            renderMessages();
+            
+            isGenerating = true;
+            document.getElementById('send-btn').disabled = true;
+            
+            const container = document.getElementById('chat-messages');
+            
+            if (CONFIG.stream) {
+                await sendStreamMessage(topic, container);
+            } else {
+                await sendNormalMessage(topic, container);
+            }
+        }
+
+        function copyMessage(index) {
+            const topic = topics.find(t => t.id === currentTopicId);
+            if (!topic || !topic.messages[index]) return;
+            
+            const msg = topic.messages[index];
+            const textToCopy = msg.fullResponse || msg.content;
+            
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const btn = event.target.closest('button');
+                const original = btn.innerHTML;
+                btn.innerHTML = `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>已复制</span>`;
+                btn.classList.add('text-green-400');
+                setTimeout(() => {
+                    btn.innerHTML = original;
+                    btn.classList.remove('text-green-400');
+                }, 2000);
+            });
+        }
+
+        // Code block handling
+        function renderMarkdown(content, msgIndex) {
+            marked.setOptions({
+                highlight: function(code, lang) {
+                    if (lang && hljs.getLanguage(lang)) {
+                        return hljs.highlight(code, { language: lang }).value;
+                    }
+                    return hljs.highlightAuto(code).value;
+                },
+                breaks: true,
+                gfm: true
+            });
+            
+            let html = marked.parse(content);
+            
+            let codeBlockIndex = 0;
+            html = html.replace(/<pre><code class="language-([^"]*)">([\s\S]*?)<\/code><\/pre>/g, (match, lang, code) => {
+                const blockId = `code-${msgIndex}-${codeBlockIndex++}`;
+                const escapedCode = escapeHtml(code);
+                const isRunnable = ['html', 'javascript', 'js'].includes(lang.toLowerCase());
+                
+                return `
+                    <div class="code-container" id="${blockId}">
+                        <div class="code-header">
+                            <div class="code-tabs">
+                                <div class="code-tab active" onclick="switchCodeTab('${blockId}', 'code', '${lang}')">预览</div>
+                                ${isRunnable ? `<div class="code-tab" onclick="switchCodeTab('${blockId}', 'preview', '${lang}')">代码</div>` : ''}
+                            </div>
+                            <div class="code-actions">
+                                <button class="code-btn" onclick="copyCodeBlock('${blockId}')">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                    </svg>
+                                    复制
+                                </button>
+                            </div>
+                        </div>
+                        <div class="code-content">
+                            <div class="code-view active" id="${blockId}-code">
+                                <pre class="m-0 p-4"><code class="language-${lang}">${escapedCode}</code></pre>
+                            </div>
+                            ${isRunnable ? `
+                                <div class="code-preview" id="${blockId}-preview">
+                                    <iframe class="preview-iframe" id="${blockId}-iframe" sandbox="allow-scripts allow-same-origin"></iframe>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            return html;
+        }
+
+        function switchCodeTab(blockId, tab, lang) {
+            const container = document.getElementById(blockId);
+            const tabs = container.querySelectorAll('.code-tab');
+            const codeView = document.getElementById(`${blockId}-code`);
+            const previewView = document.getElementById(`${blockId}-preview`);
+            
+            tabs.forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (tab === 'code') {
+                codeView.classList.add('active');
+                if (previewView) previewView.classList.remove('active');
+            } else {
+                codeView.classList.remove('active');
+                if (previewView) {
+                    previewView.classList.add('active');
+                    
+                    // Get code and prepare for preview
+                    const codeElement = document.getElementById(`${blockId}-code`).querySelector('code');
+                    const code = codeElement.textContent;
+                    
+                    const iframe = document.getElementById(`${blockId}-iframe`);
+                    let htmlContent = '';
+                    
+                    if (lang.toLowerCase() === 'html') {
+                        htmlContent = code;
+                        // If it's a partial HTML snippet, wrap it
+                        if (!code.includes('<!DOCTYPE') && !code.includes('<html')) {
+                            htmlContent = `
+                                <!DOCTYPE html>
+                                <html>
+                                <head>
+                                    <meta charset="UTF-8">
+                                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                    <style>
+                                        body { 
+                                            margin: 0; 
+                                            padding: 20px; 
+                                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                                            background: white;
+                                            color: black;
+                                        }
+                                    </style>
+                                </head>
+                                <body>${code}</body>
+                                </html>
+                            `;
+                        }
+                    } else if (['javascript', 'js'].includes(lang.toLowerCase())) {
+                        htmlContent = `
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <meta charset="UTF-8">
+                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                <style>
+                                    body { 
+                                        margin: 0; 
+                                        padding: 20px; 
+                                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                                        background: white;
+                                        color: black;
+                                    }
+                                    #output {
+                                        white-space: pre-wrap;
+                                        font-family: monospace;
+                                        background: #f3f4f6;
+                                        padding: 10px;
+                                        border-radius: 4px;
+                                        margin-top: 10px;
+                                    }
+                                    .error { color: #ef4444; }
+                                    .log { color: #1f2937; }
+                                </style>
+                            </head>
+                            <body>
+                                <div id="output"></div>
+                                <script>
+                                    const output = document.getElementById('output');
+                                    const originalLog = console.log;
+                                    const originalError = console.error;
+                                    
+                                    console.log = function(...args) {
+                                        originalLog.apply(console, args);
+                                        const line = document.createElement('div');
+                                        line.className = 'log';
+                                        line.textContent = '> ' + args.join(' ');
+                                        output.appendChild(line);
+                                    };
+                                    
+                                    console.error = function(...args) {
+                                        originalError.apply(console, args);
+                                        const line = document.createElement('div');
+                                        line.className = 'error';
+                                        line.textContent = 'Error: ' + args.join(' ');
+                                        output.appendChild(line);
+                                    };
+                                    
+                                    try {
+                                        ${code}
+                                    } catch (e) {
+                                        console.error(e.message);
+                                    }
+                                <\/script>
+                            </body>
+                            </html>
+                        `;
+                    }
+                    
+                    iframe.srcdoc = htmlContent;
+                }
+            }
+        }
+
+        function copyCodeBlock(blockId) {
+            const code = document.getElementById(`${blockId}-code`).textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = event.target.closest('button');
+                const original = btn.innerHTML;
+                btn.innerHTML = `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l                                4 4L19 7"/></svg>已复制`;
+                btn.classList.add('text-green-400');
+                setTimeout(() => {
+                    btn.innerHTML = original;
+                    btn.classList.remove('text-green-400');
+                }, 2000);
+            });
+        }
+
+        // Utilities
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 128) + 'px';
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function generateId() {
+            return 't-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function getTimestamp() {
+            return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Touch handling for mobile scrolling
+        let touchStartY = 0;
+        const chatMessages = document.getElementById('chat-messages');
+        
+        if (chatMessages) {
+            chatMessages.addEventListener('touchstart', (e) => {
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+            
+            chatMessages.addEventListener('touchmove', (e) => {
+                const touchY = e.touches[0].clientY;
+                const scrollTop = chatMessages.scrollTop;
+                const scrollHeight = chatMessages.scrollHeight;
+                const clientHeight = chatMessages.clientHeight;
+                const isAtTop = scrollTop <= 0;
+                const isAtBottom = scrollTop + clientHeight >= scrollHeight;
+                const isScrollingUp = touchY > touchStartY;
+                const isScrollingDown = touchY < touchStartY;
+                
+                // Allow default scrolling behavior
+                if ((isAtTop && isScrollingUp) || (isAtBottom && isScrollingDown)) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+        }
+    </script>
+</body>
+</html>
